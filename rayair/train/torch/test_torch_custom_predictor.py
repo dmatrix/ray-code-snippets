@@ -20,4 +20,4 @@ if __name__ == "__main__":
     data_batch = np.array([1, 2])
     predictor = CustomPredictor(model=MyModel())
     predictions = predictor.predict(data_batch, dtype=torch.float)
-    print(f"Custom results: {predictions}")
+    print(f"Predictions: {predictions.get('0')}, {predictions.get('1')}")
