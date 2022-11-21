@@ -21,7 +21,7 @@ class NeuralNetwork(nn.Module):
         super(NeuralNetwork, self).__init__()
         self.layer1 = nn.Linear(input_size, layer_size)
         self.layer2 = nn.Linear(layer_size, output_size)
-
+        
     def forward(self, input):
         return self.layer2(self.layer1(input))
 
@@ -77,11 +77,8 @@ trainer = TorchTrainer(
     datasets={"train": train_dataset})
 
 result = trainer.fit()
-
-# Get the loss metric from TorchCheckpoint tuple data dictionary
 best_checkpoint_loss = result.metrics['loss']
 # print(f"best loss: {best_checkpoint_loss:.4f}")
-
 
 # Assert loss is less 0.09
 assert best_checkpoint_loss <= 0.09
