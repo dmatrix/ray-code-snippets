@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn import functional as F
 
 import ray
 from ray import train
@@ -13,23 +14,29 @@ from ray.air.config import CheckpointConfig
 input_size = 1
 layer_size = 32
 output_size = 1
-num_epochs = 180
+num_epochs = 200
 num_workers = 3
 
 class NeuralNetwork(nn.Module):
     def __init__(self):
         super(NeuralNetwork, self).__init__()
         self.layer1 = nn.Linear(input_size, layer_size)
+        self.relu = nn.ReLU()
         self.layer2 = nn.Linear(layer_size, output_size)
         
     def forward(self, input):
-        return self.layer2(self.layer1(input))
+        return self.layer2(self.relu(self.layer1(input)))
+        
+
 
 def train_loop_per_worker():
     dataset_shard = session.get_dataset_shard("train")
     model = NeuralNetwork()
     loss_fn = nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), 
+                    lr=0.01, 
+                    weight_decay=0.01)
+
     model = train.torch.prepare_model(model)
 
     # Iterate over epochs and batches
@@ -41,7 +48,7 @@ def train_loop_per_worker():
             inputs, labels = torch.unsqueeze(batches["x"], 1), batches["y"]
             output = model(inputs)
 
-            # Get outputs as the same dimension as labels
+            # Make output shape same as the as labels
             loss = loss_fn(output.squeeze(), labels)
             
             # Zero out grads, do backward, and update optimizer
@@ -50,7 +57,7 @@ def train_loop_per_worker():
             optimizer.step()
 
             # Print what's happening with loss per 30 epochs
-            if epoch % 30 == 0:
+            if epoch % 20 == 0:
                 print(f"epoch: {epoch}/{num_epochs}, loss: {loss:.3f}")
 
         # Report and record metrics, checkpoint model at end of each 
@@ -61,7 +68,7 @@ def train_loop_per_worker():
 
 torch.manual_seed(42)
 train_dataset = ray.data.from_items(
-        [{"x": x, "y": 2 * x + 1} for x in range(2000)]
+    [{"x": x, "y": 2 * x + 1} for x in range(200)]
 )
 
 # Define scaling and run configs
@@ -78,7 +85,6 @@ trainer = TorchTrainer(
 
 result = trainer.fit()
 best_checkpoint_loss = result.metrics['loss']
-# print(f"best loss: {best_checkpoint_loss:.4f}")
 
 # Assert loss is less 0.09
 assert best_checkpoint_loss <= 0.09
